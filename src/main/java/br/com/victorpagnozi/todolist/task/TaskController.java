@@ -33,11 +33,13 @@ public class TaskController {
 
     var currentDate = LocalDateTime.now();
     if (currentDate.isAfter(taskModel.getStartAt()) || currentDate.isAfter(taskModel.getEndAt())) {
-      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Data de inicio deve ser maior que a atual");
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body("Data de inicio deve ser maior que a atual");
     }
 
     if (taskModel.getStartAt().isAfter(taskModel.getEndAt())) {
-      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Data de inicio deve ser menor que a de término");
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body("Data de inicio deve ser menor que a de término");
     }
 
     var task = this.taskRepository.save(taskModel);
@@ -55,11 +57,24 @@ public class TaskController {
   }
 
   @PutMapping("/{id}")
-  public TaskModel update(@RequestBody TaskModel taskModel, @PathVariable UUID id, HttpServletRequest request) {
+  public ResponseEntity update(@RequestBody TaskModel taskModel, @PathVariable UUID id, HttpServletRequest request) {
     var task = this.taskRepository.findById(id).orElse(null);
+
+    if (task == null) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body("Tarefa não encontrada");
+    }
+    var idUser = request.getAttribute("idUser");
+
+    if (!task.getIdUser().equals(idUser)) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body("Usuário não tem permissão para alterar essa tarefa");
+    }
 
     Utils.copyNonNullProperties(taskModel, task);
 
-    return this.taskRepository.save(task);
+    var taskUpdated = this.taskRepository.save(task);
+
+    return ResponseEntity.status(HttpStatus.OK).body(taskUpdated);
   }
 }
